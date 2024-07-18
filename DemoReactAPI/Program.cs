@@ -24,12 +24,12 @@ var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(MyAllowSpecificOrigins,
-                          policy =>
-                          {
-                              policy.WithOrigins("http://localhost:3000")
-                                                  .AllowAnyHeader()
-                                                  .AllowAnyMethod();
-                          });
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:3000")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+        });
 });
 
 var app = builder.Build();

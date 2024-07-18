@@ -30,6 +30,22 @@ namespace DemoReactAPI.Repositories
             return await query.ToListAsync();
         }
 
+        public async Task<PaginatedList<User>> GetPaginatedUsersAsync(int pageNumber, int pageSize, Expression<Func<User, bool>>? filter = null, bool tracked = true)
+        {
+
+            IQueryable<User> query = _context.Users.AsQueryable();
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+            if (!tracked)
+            {
+                query = query.AsNoTracking();
+            }
+
+            return await PaginatedList<User>.CreateAsync(query, pageNumber, pageSize);
+        }
+
         public async Task AddUserAsync(User user)
         {
             _context.Users.Add(user);

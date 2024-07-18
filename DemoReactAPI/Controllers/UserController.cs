@@ -44,12 +44,68 @@ namespace DemoReactAPI.Controllers
             }
         }
 
+        [HttpGet("paginated-list")]
+        public async Task<ResponseDto<PagedResponse<UserDto>>> GetPaginatedUsers([FromQuery] int page = 1, [FromQuery] int limit = 2)
+        {
+            try
+            {
+                var paginatedList = await _userRepository.GetPaginatedUsersAsync(page, limit);
+                var userDtos = _mapper.Map<List<UserDto>>(paginatedList);
+                var data = new PagedResponse<UserDto>(new PaginatedList<UserDto>(userDtos, paginatedList.TotalCount, page, limit));
+
+                return new ResponseDto<PagedResponse<UserDto>>
+                {
+                    Status = ResponseStatusEnum.SUCCEED,
+                    Data = data
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDto<PagedResponse<UserDto>>
+                {
+                    Status = ResponseStatusEnum.FAILED,
+                    Message = ex.Message,
+                };
+            }
+        }
+
+        [HttpGet("detail/{id}")]
+        public async Task<ResponseDto<UserDto>> GetUserDetail(Guid id)
+        {
+            try
+            {
+                var user = await _userRepository.GetUserByIdAsync(id);
+                if (user == null)
+                {
+                    return new ResponseDto<UserDto>
+                    {
+                        Status = ResponseStatusEnum.FAILED,
+                        Message = "User not found",
+                    };
+                }
+
+                return new ResponseDto<UserDto>
+                {
+                    Status = ResponseStatusEnum.SUCCEED,
+                    Data = _mapper.Map<UserDto>(user)
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDto<UserDto>
+                {
+                    Status = ResponseStatusEnum.FAILED,
+                    Message = ex.Message,
+                };
+            }
+        }
+
         [HttpPost("store")]
         public async Task<ResponseDto> Store([FromForm] CreateUserRequest request, IFormFile? avatar)
         {
             try
             {
-                var existUserByEmail = await _userRepository.GetUserByPhoneAsync(request.Username);
+                var existUserByEmail = await _userRepository.GetUserByEmailAsync(request.Email);
                 if (existUserByEmail != null)
                 {
                     return new ResponseDto
@@ -59,7 +115,7 @@ namespace DemoReactAPI.Controllers
                     };
                 }
                  
-                var existUserByPhone = await _userRepository.GetUserByEmailAsync(request.Phone);
+                var existUserByPhone = await _userRepository.GetUserByPhoneAsync(request.Phone);
                 if (existUserByPhone != null)
                 {
                     return new ResponseDto
@@ -117,7 +173,7 @@ namespace DemoReactAPI.Controllers
         {
             try
             {
-                var user = await _userRepository.GetUserByIdAsync(request.Id, false);
+                var user = await _userRepository.GetUserByIdAsync(request.Id);
                 if (user == null)
                 {
                     return new ResponseDto
@@ -135,14 +191,15 @@ namespace DemoReactAPI.Controllers
                         return new ResponseDto
                         {
                             Status = ResponseStatusEnum.FAILED,
-                            Message = "Email is already exist",
+                            Message = "Username is already exist",
                         };
                     }
+                    user.Username = request.Username;
                 }
 
                 if (request.Phone != user.Phone)
                 {
-                    var existUserByPhone = await _userRepository.GetUserByEmailAsync(request.Phone);
+                    var existUserByPhone = await _userRepository.GetUserByPhoneAsync(request.Phone);
                     if (existUserByPhone != null && existUserByPhone.Id != user.Id)
                     {
                         return new ResponseDto
@@ -151,19 +208,21 @@ namespace DemoReactAPI.Controllers
                             Message = "Phone is already exist",
                         };
                     }
+                    user.Phone = request.Phone;
                 }
 
-                if (request.Username != user.Username)
+                if (request.Email != user.Email)
                 {
-                    var existUserByUsername = await _userRepository.GetUserByUsernameAsync(request.Username);
+                    var existUserByUsername = await _userRepository.GetUserByEmailAsync(request.Email);
                     if (existUserByUsername != null && existUserByUsername.Id != user.Id)
                     {
                         return new ResponseDto
                         {
                             Status = ResponseStatusEnum.FAILED,
-                            Message = "Username is already exist",
+                            Message = "Email is already exist",
                         };
                     }
+                    user.Email = request.Email;
                 }
 
                 if (avatar != null)
@@ -177,15 +236,50 @@ namespace DemoReactAPI.Controllers
                             Message = "Upload image failed",
                         };
                     }
-                    request.Avatar = imagePath;
+                    user.Avatar = imagePath;
                 }
 
-                await _userRepository.UpdateUserAsync(_mapper.Map<User>(request));
+                user.FullName = request.FullName;
+                user.Role = (RoleEnum)request.Role;
+                await _userRepository.UpdateUserAsync(_mapper.Map<User>(user));
 
                 return new ResponseDto
                 {
                     Status = ResponseStatusEnum.SUCCEED,
                     Message = "Update user successfully"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ResponseDto
+                {
+                    Status = ResponseStatusEnum.FAILED,
+                    Message = ex.Message,
+                };
+            }
+        }
+
+        [HttpDelete("delete/{id}")]
+        public async Task<ResponseDto> DeleteUser(Guid id)
+        {
+            try
+            {
+                var user = await _userRepository.GetUserByIdAsync(id);
+                if (user == null)
+                {
+                    return new ResponseDto
+                    {
+                        Status = ResponseStatusEnum.FAILED,
+                        Message = "User not found",
+                    };
+                }
+
+                await _userRepository.DeleteUserAsync(user);
+
+                return new ResponseDto
+                {
+                    Status = ResponseStatusEnum.SUCCEED,
+                    Message = "Delete user successfully"
                 };
             }
             catch (Exception ex)

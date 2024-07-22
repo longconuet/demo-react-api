@@ -36,8 +36,8 @@ namespace DemoReactAPI.Repositories
 
         public async Task UpdateRefreshTokenAsync(string username, string newRefreshToken)
         {
-            var token = _context.RefreshTokens
-                .FirstOrDefault(rt => rt.Username == username);
+            var token = await _context.RefreshTokens
+                .FirstOrDefaultAsync(rt => rt.Username == username);
             if (token != null)
             {
                 token.Token = newRefreshToken;
@@ -50,8 +50,8 @@ namespace DemoReactAPI.Repositories
 
         public async Task RemoveRefreshTokenAsync(string username, string refreshToken)
         {
-            var token = _context.RefreshTokens
-                .FirstOrDefault(rt => rt.Username == username && rt.Token == refreshToken);
+            var token = await _context.RefreshTokens
+                .FirstOrDefaultAsync(rt => rt.Username == username && rt.Token == refreshToken);
             if (token != null)
             {
                 _context.RefreshTokens.Remove(token);

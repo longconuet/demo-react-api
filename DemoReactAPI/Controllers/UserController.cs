@@ -4,12 +4,14 @@ using DemoReactAPI.Entities;
 using DemoReactAPI.Enums;
 using DemoReactAPI.Helpers;
 using DemoReactAPI.Repositories.IRepositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DemoReactAPI.Controllers
 {
     [Route("api/users")]
     [ApiController]
+    [Authorize(Policy = "AdminOnly")]
     public class UserController : ControllerBase
     {
         private readonly IUserRepository _userRepository;

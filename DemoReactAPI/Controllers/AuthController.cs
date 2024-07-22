@@ -35,16 +35,7 @@ namespace DemoReactAPI.Controllers
 
             if (PasswordHelper.VerifyPassword(request.Password, user.Password))
             {
-                var userRole = "Admin";
-
-                var claims = new[]
-                {
-                    new Claim(JwtRegisteredClaimNames.Sub, request.Username),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                    new Claim(ClaimTypes.Role, userRole)
-                };
-
-                var accessToken = _jwtService.GenerateAccessToken(claims);
+                var accessToken = _jwtService.GenerateAccessToken(request.Username, "Admin");
                 var refreshToken = _jwtService.GenerateRefreshToken();
 
                 await _refreshTokenRepository.SaveRefreshTokenAsync(request.Username, refreshToken);
@@ -71,7 +62,7 @@ namespace DemoReactAPI.Controllers
                 return Unauthorized();
             }
 
-            var newAccessToken = _jwtService.GenerateAccessToken(principal.Claims);
+            var newAccessToken = _jwtService.GenerateAccessTokenByClaims(principal.Claims);
             var newRefreshToken = _jwtService.GenerateRefreshToken();
 
             await _refreshTokenRepository.UpdateRefreshTokenAsync(username, newRefreshToken);

@@ -8,6 +8,7 @@ using System.Text;
 using DemoReactAPI.Models;
 using DemoReactAPI.Services;
 using Microsoft.OpenApi.Models;
+using DemoReactAPI.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -85,7 +86,8 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings.Issuer,
         ValidAudience = jwtSettings.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+        ClockSkew = TimeSpan.Zero
     };
     options.Events = new JwtBearerEvents
     {
@@ -105,13 +107,15 @@ builder.Services.AddAuthentication(options =>
 // Configure authorization policies
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("UserOnly", policy => policy.RequireRole("User"));
+    options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("User", policy => policy.RequireRole("User"));
 });
 
 builder.Services.AddSingleton<JwtService>();
 
 var app = builder.Build();
+
+app.UseMiddleware<TokenValidationMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -125,8 +129,9 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseCors(MyAllowSpecificOrigins);
 
-app.UseAuthorization();
+
 app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 

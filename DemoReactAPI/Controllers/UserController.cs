@@ -11,7 +11,7 @@ namespace DemoReactAPI.Controllers
 {
     [Route("api/users")]
     [ApiController]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = "Admin")]
     public class UserController : ControllerBase
     {
         private readonly IUserRepository _userRepository;

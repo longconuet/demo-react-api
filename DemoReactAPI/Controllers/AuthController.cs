@@ -1,5 +1,6 @@
 ﻿using DemoReactAPI.Dtos;
 using DemoReactAPI.Entities;
+using DemoReactAPI.Enums;
 using DemoReactAPI.Helpers;
 using DemoReactAPI.Repositories.IRepositories;
 using DemoReactAPI.Services;
@@ -25,29 +26,41 @@ namespace DemoReactAPI.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        public async Task<ResponseDto<TokenResponse>> Login([FromBody] LoginRequest request)
         {
             var user = await _userRepository.GetUserByUsernameAsync(request.Username);
             if (user == null)
             {
-                return Unauthorized();
+                return new ResponseDto<TokenResponse>
+                {
+                    Status = ResponseStatusEnum.FAILED,
+                    Message = "User not found",
+                };
             }
 
-            if (PasswordHelper.VerifyPassword(request.Password, user.Password))
+            if (!PasswordHelper.VerifyPassword(request.Password, user.Password))
             {
-                var accessToken = _jwtService.GenerateAccessToken(request.Username, "Admin");
-                var refreshToken = _jwtService.GenerateRefreshToken();
+                return new ResponseDto<TokenResponse>
+                {
+                    Status = ResponseStatusEnum.FAILED,
+                    Message = "Incorrect password",
+                };
+            }
 
-                await _refreshTokenRepository.SaveRefreshTokenAsync(request.Username, refreshToken);
+            var accessToken = _jwtService.GenerateAccessToken(request.Username, "Admin");
+            var refreshToken = _jwtService.GenerateRefreshToken();
 
-                return Ok(new TokenResponse
+            await _refreshTokenRepository.SaveRefreshTokenAsync(request.Username, refreshToken);
+
+            return new ResponseDto<TokenResponse>
+            {
+                Status = ResponseStatusEnum.SUCCEED,
+                Data = new TokenResponse
                 {
                     AccessToken = accessToken,
                     RefreshToken = refreshToken
-                });
-            }
-
-            return Unauthorized();
+                }
+            };
         }
 
         [HttpPost("refresh")]

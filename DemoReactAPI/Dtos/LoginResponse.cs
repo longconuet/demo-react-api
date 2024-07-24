@@ -8,5 +8,6 @@ namespace DemoReactAPI.Dtos
         public string RefreshToken { get; set; }
         public RoleEnum Role { get; set; }
         public string FullName { get; set; }
+        public string? Avatar { get; set; }
     }
 }

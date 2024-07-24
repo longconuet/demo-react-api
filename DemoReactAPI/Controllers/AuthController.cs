@@ -1,12 +1,9 @@
 ﻿using DemoReactAPI.Dtos;
-using DemoReactAPI.Entities;
 using DemoReactAPI.Enums;
 using DemoReactAPI.Helpers;
 using DemoReactAPI.Repositories.IRepositories;
 using DemoReactAPI.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 
 namespace DemoReactAPI.Controllers
 {
@@ -26,12 +23,12 @@ namespace DemoReactAPI.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<ResponseDto<TokenResponse>> Login([FromBody] LoginRequest request)
+        public async Task<ResponseDto<LoginResponse>> Login([FromBody] LoginRequest request)
         {
             var user = await _userRepository.GetUserByUsernameAsync(request.Username);
             if (user == null)
             {
-                return new ResponseDto<TokenResponse>
+                return new ResponseDto<LoginResponse>
                 {
                     Status = ResponseStatusEnum.FAILED,
                     Message = "User not found",
@@ -40,25 +37,28 @@ namespace DemoReactAPI.Controllers
 
             if (!PasswordHelper.VerifyPassword(request.Password, user.Password))
             {
-                return new ResponseDto<TokenResponse>
+                return new ResponseDto<LoginResponse>
                 {
                     Status = ResponseStatusEnum.FAILED,
                     Message = "Incorrect password",
                 };
             }
 
+            // gen token
             var accessToken = _jwtService.GenerateAccessToken(request.Username, "Admin");
             var refreshToken = _jwtService.GenerateRefreshToken();
-
             await _refreshTokenRepository.SaveRefreshTokenAsync(request.Username, refreshToken);
 
-            return new ResponseDto<TokenResponse>
+            return new ResponseDto<LoginResponse>
             {
                 Status = ResponseStatusEnum.SUCCEED,
-                Data = new TokenResponse
+                Data = new LoginResponse
                 {
                     AccessToken = accessToken,
-                    RefreshToken = refreshToken
+                    RefreshToken = refreshToken,
+                    FullName = user.FullName,
+                    Role = user.Role,
+                    Avatar = user.Avatar
                 }
             };
         }
@@ -92,7 +92,7 @@ namespace DemoReactAPI.Controllers
         public async Task<IActionResult> Revoke([FromBody] TokenRequest request)
         {
             var principal = _jwtService.GetPrincipalFromExpiredToken(request.AccessToken);
-            var username = principal.Identity.Name;
+            var username = principal.Identity!.Name;
 
             await _refreshTokenRepository.RemoveRefreshTokenAsync(username, request.RefreshToken);
 

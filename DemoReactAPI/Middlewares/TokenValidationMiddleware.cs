@@ -1,6 +1,8 @@
 ﻿using DemoReactAPI.Models;
+using DemoReactAPI.Services;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 
 namespace DemoReactAPI.Middlewares
@@ -9,31 +11,30 @@ namespace DemoReactAPI.Middlewares
     {
         private readonly RequestDelegate _next;
         private readonly JwtSettings _jwtSettings;
+        private readonly JwtBlackListService _blackListService;
 
-        public TokenValidationMiddleware(RequestDelegate next, JwtSettings jwtSettings)
+        public TokenValidationMiddleware(RequestDelegate next, JwtSettings jwtSettings, JwtBlackListService jwtBlackListService)
         {
             _next = next;
             _jwtSettings = jwtSettings;
+            _blackListService = jwtBlackListService;
         }
 
         public async Task InvokeAsync(HttpContext context)
         {
             var endpoint = context.GetEndpoint();
-
             if (endpoint != null && endpoint.Metadata.GetMetadata<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>() != null)
             {
                 var token = context.Request.Headers["Authorization"].FirstOrDefault()?.Split(" ").Last();
 
-                if (token != null)
-                {
-                    AttachUserToContext(context, token);
-                }
-                else
+                if (token == null || (token != null && _blackListService.IsTokenBlackListed(token)))
                 {
                     context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                     await context.Response.WriteAsync("Unauthorized");
                     return;
                 }
+
+                AttachUserToContext(context, token);
             }
 
             await _next(context);
@@ -59,10 +60,10 @@ namespace DemoReactAPI.Middlewares
                 }, out SecurityToken validatedToken);
 
                 var jwtToken = (JwtSecurityToken)validatedToken;
-                var username = jwtToken.Claims.First(x => x.Type == JwtRegisteredClaimNames.Sub).Value;
 
                 // Attach user to context on successful jwt validation
-                context.Items["User"] = username;
+                context.Items["UserName"] = jwtToken.Claims.First(x => x.Type == JwtRegisteredClaimNames.Sub).Value;
+                context.Items["Role"] = jwtToken.Claims.First(x => x.Type == ClaimTypes.Role).Value;
             }
             catch (Exception e)
             {

@@ -68,6 +68,10 @@ builder.Services.AddCors(options =>
 
 // Load JWT settings from configuration
 var jwtSettings = builder.Configuration.GetSection(nameof(JwtSettings)).Get<JwtSettings>();
+if (jwtSettings is null)
+{
+    throw new ArgumentNullException(nameof(JwtSettings));
+}
 builder.Services.AddSingleton(jwtSettings);
 
 // Configure JWT authentication
@@ -112,9 +116,11 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddSingleton<JwtService>();
+builder.Services.AddSingleton<JwtBlackListService>();
 
 var app = builder.Build();
 
+// Middlewares
 app.UseMiddleware<TokenValidationMiddleware>();
 
 // Configure the HTTP request pipeline.

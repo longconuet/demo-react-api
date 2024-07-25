@@ -12,5 +12,7 @@ namespace DemoReactAPI.Entities
         public string? Avatar { get; set; }
         public RoleEnum Role { get; set; } = RoleEnum.USER;
         public UserStatusEnum Status { get; set; } = UserStatusEnum.Active;
+
+        public List<QuizAttempt> QuizAttempts { get; set; }
     }
 }

@@ -1,4 +1,6 @@
-﻿using DemoReactAPI.Dtos;
+﻿using Azure.Core;
+using DemoReactAPI.Dtos;
+using DemoReactAPI.Entities;
 using DemoReactAPI.Enums;
 using DemoReactAPI.Helpers;
 using DemoReactAPI.Repositories.IRepositories;
@@ -74,7 +76,7 @@ namespace DemoReactAPI.Controllers
 
         [HttpPost("refresh-token")]
         [Authorize]
-        public async Task<IActionResult> RefreshToken([FromBody] TokenRequest request)
+        public async Task<ResponseDto<LoginResponse>> RefreshToken([FromBody] TokenRequest request)
         {
             var principal = _jwtService.GetPrincipalFromExpiredToken(request.AccessToken);
             var username = principal.Identity?.Name;
@@ -82,7 +84,11 @@ namespace DemoReactAPI.Controllers
             var storedRefreshToken = await _refreshTokenRepository.GetRefreshTokenAsync(username, request.RefreshToken);
             if (storedRefreshToken == null || storedRefreshToken.ExpiryDate < DateTime.Now)
             {
-                return Unauthorized();
+                return new ResponseDto<LoginResponse>
+                {
+                    Status = ResponseStatusEnum.FAILED,
+                    Message = "Invalid token",
+                };
             }
 
             var newAccessToken = _jwtService.GenerateAccessTokenByClaims(principal.Claims);
@@ -90,11 +96,29 @@ namespace DemoReactAPI.Controllers
 
             await _refreshTokenRepository.UpdateRefreshTokenAsync(username, newRefreshToken);
 
-            return Ok(new TokenResponse
+            // get user info
+            var user = await _userRepository.GetUserByUsernameAsync(username);
+            if (user == null)
             {
-                AccessToken = newAccessToken,
-                RefreshToken = newRefreshToken
-            });
+                return new ResponseDto<LoginResponse>
+                {
+                    Status = ResponseStatusEnum.FAILED,
+                    Message = "User not found",
+                };
+            }
+
+            return new ResponseDto<LoginResponse>
+            {
+                Status = ResponseStatusEnum.SUCCEED,
+                Data = new LoginResponse
+                {
+                    AccessToken = newAccessToken,
+                    RefreshToken = newRefreshToken,
+                    FullName = user.FullName,
+                    Role = user.Role,
+                    Avatar = user.Avatar
+                }
+            };
         }
 
 

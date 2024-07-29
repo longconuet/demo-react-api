@@ -51,9 +51,10 @@ namespace DemoReactAPI.Controllers
                     Message = "Incorrect password",
                 };
             }
+            var role = user.Role == RoleEnum.ADMIN ? "Admin" : "User";
 
             // gen token
-            var accessToken = _jwtService.GenerateAccessToken(request.Username, "Admin");
+            var accessToken = _jwtService.GenerateAccessToken(request.Username, role);
             var refreshToken = _jwtService.GenerateRefreshToken();
             await _refreshTokenRepository.SaveRefreshTokenAsync(request.Username, refreshToken);
 

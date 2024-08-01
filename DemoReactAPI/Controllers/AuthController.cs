@@ -7,6 +7,8 @@ using DemoReactAPI.Repositories.IRepositories;
 using DemoReactAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace DemoReactAPI.Controllers
 {
@@ -75,11 +77,19 @@ namespace DemoReactAPI.Controllers
         }
 
         [HttpPost("refresh-token")]
-        [Authorize]
         public async Task<ResponseDto<LoginResponse>> RefreshToken([FromBody] TokenRequest request)
         {
             var principal = _jwtService.GetPrincipalFromExpiredToken(request.AccessToken);
-            var username = principal.Identity?.Name;
+            var username = principal.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier)?.Value;
+            var role = principal.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Role)?.Value;
+            if (username == null || role == null)
+            {
+                return new ResponseDto<LoginResponse>
+                {
+                    Status = ResponseStatusEnum.FAILED,
+                    Message = "Invalid token",
+                };
+            }
 
             var storedRefreshToken = await _refreshTokenRepository.GetRefreshTokenAsync(username, request.RefreshToken);
             if (storedRefreshToken == null || storedRefreshToken.ExpiryDate < DateTime.Now)
@@ -91,7 +101,7 @@ namespace DemoReactAPI.Controllers
                 };
             }
 
-            var newAccessToken = _jwtService.GenerateAccessTokenByClaims(principal.Claims);
+            var newAccessToken = _jwtService.GenerateAccessToken(username, role);
             var newRefreshToken = _jwtService.GenerateRefreshToken();
 
             await _refreshTokenRepository.UpdateRefreshTokenAsync(username, newRefreshToken);

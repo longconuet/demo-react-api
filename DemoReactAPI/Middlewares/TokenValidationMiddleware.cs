@@ -62,7 +62,7 @@ namespace DemoReactAPI.Middlewares
                 var jwtToken = (JwtSecurityToken)validatedToken;
 
                 // Attach user to context on successful jwt validation
-                context.Items["UserName"] = jwtToken.Claims.First(x => x.Type == JwtRegisteredClaimNames.Sub).Value;
+                context.Items["UserName"] = jwtToken.Claims.First(x => x.Type == ClaimTypes.NameIdentifier).Value;
                 context.Items["Role"] = jwtToken.Claims.First(x => x.Type == ClaimTypes.Role).Value;
             }
             catch (Exception e)
